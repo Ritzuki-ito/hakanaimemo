@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>儚い手書きキャンバス</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #ffffff;
+  }
+  canvas {
+    display: block;
+    touch-action: none; /* ペンのジェスチャー無効化 */
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let isDrawing = false;
+let lastPointerTime = 0;
+let fadeTimer = null;
+let fadeProgress = 0;
+let savedImage = null;
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+canvas.addEventListener('pointerdown', (e) => {
+    if (fadeTimer) {
+        clearInterval(fadeTimer);
+        fadeProgress = 0;
+        restoreImage();
+    }
+    isDrawing = true;
+    lastPointerTime = Date.now();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX, e.clientY);
+});
+
+canvas.addEventListener('pointermove', (e) => {
+    if (isDrawing) {
+        ctx.lineTo(e.clientX, e.clientY);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    }
+});
+
+canvas.addEventListener('pointerup', (e) => {
+    isDrawing = false;
+    savedImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setTimeout(() => {
+        if (!isDrawing) {
+            startFadeOut();
+        }
+    }, 100); // 0.1秒待機
+});
+
+function startFadeOut() {
+    fadeProgress = 0;
+    fadeTimer = setInterval(() => {
+        fadeProgress += 0.1;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (savedImage) {
+            ctx.globalAlpha = 1 - fadeProgress;
+            ctx.putImageData(savedImage, 0, 0);
+            ctx.globalAlpha = 1.0;
+        }
+        if (fadeProgress >= 1) {
+            clearInterval(fadeTimer);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }, 100); // 0.1秒ごとにフェード進行
+}
+
+function restoreImage() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (savedImage) {
+        ctx.putImageData(savedImage, 0, 0);
+    }
+}
+</script>
+</body>
+</html>
